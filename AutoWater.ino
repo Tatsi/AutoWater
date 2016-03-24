@@ -2,7 +2,7 @@
 #include "TFTLCD.h"
 #include <SD.h>
 #include "TouchScreen.h"
-#include <ArrayList.h>
+//#include <ArrayList.h>
 
 //#define DHTPIN 2 //Yhsistä lämpötila/ilmankosteussensorin signaali DIGITAALI pinniin 0
 //#define LIGHT_SENSOR_PIN 3//Yhdistä valosensorin signaali DIGITAALI pinniin 1
@@ -43,11 +43,11 @@ TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 //DHT dht(DHTPIN, DHTTYPE);
 
 //ArrayList tempValues;
-ArrayList soilValues;
+//ArrayList soilValues;
 //ArrayList humidityValues;
 //ArrayList lightValues;
 
-char soilSensorPrintout[4];
+//char soilSensorPrintout[4];
 //char humiditySensorPrintout[4];
 //char temperatureSensorPrintout[4];
 //char lightSensorPrintout[4];
@@ -55,7 +55,7 @@ File root;
 
 void setup(void) { 
   //tempValues = new ArrayList();
-  soilValues = new ArrayList();
+  //soilValues = new ArrayList();
   //humidityValues = new ArrayList();
   //lightValues = new ArrayList();
   Serial.begin(9600);
@@ -80,7 +80,7 @@ void setup(void) {
   for (int i = 1; i < VALUE_COUNT; i++)
   {
     //tempValues.add(0.0f);
-    soilValues.add(0.0f);
+    //soilValues.add(0.0f);
     //humidityValues.add(0.0f);
     //lightValues.add(0.0f);
   }
@@ -114,15 +114,15 @@ void loop(void) {
   //tempValues.add(temperature);
   //humidityValues.add(humidity);
   //lightValues.add(light);
-  soilValues.add(soil_sensor);
+  //soilValues.add(soil_sensor);
  
-  if (soilValues.size() > VALUE_COUNT)
-  {
+  //if (soilValues.size() > VALUE_COUNT)
+  //{
     //tempValues.remove(0);
-    soilValues.remove(0);
+    //soilValues.remove(0);
     //humidityValues.remove(0);
     //lightValues.remove(0);
-  }
+  //}
 
   // Check if any reads failed and exit early (to try again).
   //if (isnan(h) || isnan(t)) {
@@ -137,7 +137,7 @@ void loop(void) {
   //Serial.print(",");
  
   // convert the readings to a char arrays
-  soil_sensor_value.toCharArray(soilSensorPrintout, 4);
+  //soil_sensor_value.toCharArray(soilSensorPrintout, 4);
   //h.toCharArray(humiditySensorPrintout, 4);
   //t.toCharArray(temperatureSensorPrintout, 4);
   //l.toCharArray(lightSensorPrintout, 4);
@@ -147,12 +147,12 @@ void loop(void) {
   
   tft.drawRect(tft.TFTWIDTH, 0, tft.TFTWIDTH, tft.TFTHEIGHT/4, YELLOW);
   tft.drawString(0, 0+2, "Soil:", CYAN);
-  tft.drawString(80, 0+2, soilSensorPrintout, WHITE);
-  float previous = soilValues[0];
+  //tft.drawString(80, 0+2, soilSensorPrintout, WHITE);
+  //float previous = soilValues[0];
   for (int i = 1; i < VALUE_COUNT; i++)
   {
-    tft.drawLine((i-1)*(tft.TFTWIDTH/VALUE_COUNT), tft.TFTHEIGHT/4-(previous/700)*(tft.TFTHEIGHT/4),i*(tft.TFTWIDTH/VALUE_COUNT), tft.TFTHEIGHT/4-(soilValues[i]/700)*(tft.TFTHEIGHT/4));
-    previous = soilValues[i];
+    //tft.drawLine((i-1)*(tft.TFTWIDTH/VALUE_COUNT), tft.TFTHEIGHT/4-(previous/700)*(tft.TFTHEIGHT/4),i*(tft.TFTWIDTH/VALUE_COUNT), tft.TFTHEIGHT/4-(soilValues[i]/700)*(tft.TFTHEIGHT/4));
+    //previous = soilValues[i];
   }
   
   tft.drawRect(tft.TFTWIDTH, tft.TFTHEIGHT/4, tft.TFTWIDTH, tft.TFTHEIGHT/4, YELLOW);
