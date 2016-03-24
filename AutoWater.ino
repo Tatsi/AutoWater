@@ -1,14 +1,8 @@
-//#include <DHT.h>
-#include "TFTLCD.h"
+#include "st7783/TFTLCD.h"
 #include <SD.h>
-#include "TouchScreen.h"
-//#include <ArrayList.h>
+#include "st7783/TouchScreen.h"
 
-//#define DHTPIN 2 //Yhsistä lämpötila/ilmankosteussensorin signaali DIGITAALI pinniin 0
-//#define LIGHT_SENSOR_PIN 3//Yhdistä valosensorin signaali DIGITAALI pinniin 1
 #define PUMP_PIN 2 //Yhdistä moottori (vesipumppu) B:n signaali DIGITAALI pinniin 2
-
-//#define DHTTYPE DHT11 //Ilmankosteussensorin tyyppi on DHT111
 
 //LCD Pins
 #define LCD_CS A3    
@@ -25,8 +19,6 @@
 
 #define SOIL_SENSOR_PIN A5
 #define WATER_SENSOR_PIN A4
-//#define DHT_SENSOR_PIN 2
-//#define LIGHT_SENSOR_PIN 3
 
 #define	BLACK           0x0000
 #define	BLUE            0x001F
@@ -37,33 +29,20 @@
 #define YELLOW          0xFFE0 
 #define WHITE           0xFFFF
 
-int VALUE_COUNT = 24;
+#define VALUE_COUNT 24
+
 TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET); //TFT chip 7783
 TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
-//DHT dht(DHTPIN, DHTTYPE);
 
-//ArrayList tempValues;
-//ArrayList soilValues;
-//ArrayList humidityValues;
-//ArrayList lightValues;
+int soilValues[VALUE_COUNT];
+int counter = 0;
 
-//char soilSensorPrintout[4];
-//char humiditySensorPrintout[4];
-//char temperatureSensorPrintout[4];
-//char lightSensorPrintout[4];
 File root;
 
 void setup(void) { 
-  //tempValues = new ArrayList();
-  //soilValues = new ArrayList();
-  //humidityValues = new ArrayList();
-  //lightValues = new ArrayList();
   Serial.begin(9600);
-  
-
   tft.reset();
  
-  
   //Serial.print(F("Initializing SD card..."));
   //if (!SD.begin(SD_CS)) {
   //  Serial.println(F("failed!"));
@@ -77,12 +56,9 @@ void setup(void) {
   tft.setTextColor(BLACK);
   tft.setTextSize(100);
   
-  for (int i = 1; i < VALUE_COUNT; i++)
+  for (int i = 0; i < VALUE_COUNT; i++)
   {
-    //tempValues.add(0.0f);
-    //soilValues.add(0.0f);
-    //humidityValues.add(0.0f);
-    //lightValues.add(0.0f);
+    soilValues[i] = 0;
   }
 }
 
@@ -101,53 +77,35 @@ void loop(void) {
 
   //Read sensor data
   float soil_sensor = analogRead(SOIL_SENSOR_PIN);
-  String soil_sensor_value = String(soil_sensor);
-  //float humidity = dht.readHumidity();
-  //float temperature = dht.readTemperature();
-  //boolean light = digitalRead(LIGHT_SENSOR_PIN);
-  //String soil_sensor_value = "366";
-  //String h = String(humidity);
-  //String t = String(temperature);
-  //String l = String(light);
+  soilValues[counter] = int(soil_sensor);
+  String soil_sensor_value = String(soil_sensor);  
+  char soilSensorPrintout[4];
+  soil_sensor_value.toCharArray(soilSensorPrintout, 4);
   
-
-  //tempValues.add(temperature);
-  //humidityValues.add(humidity);
-  //lightValues.add(light);
-  //soilValues.add(soil_sensor);
- 
-  //if (soilValues.size() > VALUE_COUNT)
-  //{
-    //tempValues.remove(0);
-    //soilValues.remove(0);
-    //humidityValues.remove(0);
-    //lightValues.remove(0);
-  //}
-
+  float water_sensor = analogRead(WATER_SENSOR_PIN);
+  String water_sensor_value = String(water_sensor);  
+  char waterSensorPrintout[4];
+  water_sensor_value.toCharArray(waterSensorPrintout, 4);
+  
   // Check if any reads failed and exit early (to try again).
   //if (isnan(h) || isnan(t)) {
   //  Serial.println("Failed to read from DHT sensor!");
   //  return;
   //}
-  //Serial.print("Humidity:"); 
-  //Serial.print(h);
-  //Serial.print(",");
-  //Serial.print("Temperature:"); 
-  //Serial.print(t);
-  //Serial.print(",");
  
   // convert the readings to a char arrays
-  //soil_sensor_value.toCharArray(soilSensorPrintout, 4);
-  //h.toCharArray(humiditySensorPrintout, 4);
-  //t.toCharArray(temperatureSensorPrintout, 4);
-  //l.toCharArray(lightSensorPrintout, 4);
+
+  
   
   //Draw to screen
   tft.fillScreen(BLACK);
   
   tft.drawRect(tft.TFTWIDTH, 0, tft.TFTWIDTH, tft.TFTHEIGHT/4, YELLOW);
   tft.drawString(0, 0+2, "Soil:", CYAN);
-  //tft.drawString(80, 0+2, soilSensorPrintout, WHITE);
+  tft.drawString(80, 0+2, soilSensorPrintout, WHITE);
+  tft.drawString(120, 0+2, "Water:", CYAN);
+  tft.drawString(200, 0+2, waterSensorPrintout, WHITE);
+  
   //float previous = soilValues[0];
   for (int i = 1; i < VALUE_COUNT; i++)
   {
@@ -156,15 +114,14 @@ void loop(void) {
   }
   
   tft.drawRect(tft.TFTWIDTH, tft.TFTHEIGHT/4, tft.TFTWIDTH, tft.TFTHEIGHT/4, YELLOW);
-  tft.drawString(0, tft.TFTHEIGHT/4+2, "Humidity:", CYAN);
-  //tft.drawString(80, tft.TFTHEIGHT/4+2, humiditySensorPrintout, WHITE);
+  tft.drawString(0, tft.TFTHEIGHT/4+2, "Manual water:", CYAN);
   
   tft.drawRect(tft.TFTWIDTH, tft.TFTHEIGHT/2, tft.TFTWIDTH, tft.TFTHEIGHT/4, YELLOW);
-  tft.drawString(0, tft.TFTHEIGHT/2+2, "Temperature:", CYAN);
+  tft.drawString(0, tft.TFTHEIGHT/2+2, "Watering level:", CYAN);
   //tft.drawString(80, tft.TFTHEIGHT/2+2, temperatureSensorPrintout, WHITE);
   
   tft.drawRect(tft.TFTWIDTH, 3*tft.TFTHEIGHT/4, tft.TFTWIDTH, tft.TFTHEIGHT/4, YELLOW);
-  tft.drawString(0, 3*tft.TFTHEIGHT/4+2, "Light:", CYAN);
+  tft.drawString(0, 3*tft.TFTHEIGHT/4+2, "Disable watering:", CYAN);
   //tft.drawString(80, 3*tft.TFTHEIGHT/4+2, lightSensorPrintout, WHITE);
   
   delay(2000);
