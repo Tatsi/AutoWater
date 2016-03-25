@@ -1,8 +1,15 @@
 #include "st7783/TFTLCD.h"
 #include <SD.h>
 #include "st7783/TouchScreen.h"
+//#include "reg51.h"
 
-#define PUMP_PIN 2 //Yhdistä moottori (vesipumppu) B:n signaali DIGITAALI pinniin 2
+//#define PUMP_DIRECTION_PIN 2 //Waterpump direction, connected to B_IB pin on HG7881 (L9110) Dual Channel Motor Driver Module
+#define PUMP_PWM_PIN 2 //Waterpump speed, connected to B_IA pin on HG7881 (L9110) Dual Channel Motor Driver Module
+#define PWM_SLOW 50
+#define PWM_FAST 200 
+
+#define SOIL_SENSOR_PIN A5
+#define WATER_SENSOR_PIN A4
 
 //LCD Pins
 #define LCD_CS A3    
@@ -17,9 +24,7 @@
 #define YM 7   // can be a digital pin
 #define XP 6   // can be a digital pin
 
-#define SOIL_SENSOR_PIN A5
-#define WATER_SENSOR_PIN A4
-
+// Colors
 #define	BLACK           0x0000
 #define	BLUE            0x001F
 #define	RED             0xF800
@@ -60,10 +65,14 @@ void setup(void) {
   {
     soilValues[i] = 0;
   }
+
+  //pinMode(PUMP_DIRECTION_PIN, OUTPUT);
+  pinMode(PUMP_PWM_PIN, OUTPUT);
+  //digitalWrite(PUMP_DIRECTION_PIN, LOW);
+  digitalWrite(PUMP_PWM_PIN, LOW);
 }
 
 void loop(void) { 
-  
   //Check for press
   //TSPoint p = ts.getPoint();
   
@@ -81,21 +90,24 @@ void loop(void) {
   String soil_sensor_value = String(soil_sensor);  
   char soilSensorPrintout[4];
   soil_sensor_value.toCharArray(soilSensorPrintout, 4);
+
+  if (soil_sensor > 100.0)
+  {
+    //digitalWrite(PUMP_DIRECTION_PIN, LOW);
+    digitalWrite(PUMP_PWM_PIN, LOW);
+    delay(1000);
+    //digitalWrite(PUMP_DIRECTION_PIN, HIGH); // direction = forward
+    analogWrite(PUMP_PWM_PIN, 255-PWM_FAST); // PWM speed = fast
+  } else
+  {
+    //digitalWrite(PUMP_DIRECTION_PIN, LOW);
+    digitalWrite(PUMP_PWM_PIN, LOW);
+  }
   
   float water_sensor = analogRead(WATER_SENSOR_PIN);
   String water_sensor_value = String(water_sensor);  
   char waterSensorPrintout[4];
   water_sensor_value.toCharArray(waterSensorPrintout, 4);
-  
-  // Check if any reads failed and exit early (to try again).
-  //if (isnan(h) || isnan(t)) {
-  //  Serial.println("Failed to read from DHT sensor!");
-  //  return;
-  //}
- 
-  // convert the readings to a char arrays
-
-  
   
   //Draw to screen
   tft.fillScreen(BLACK);
@@ -123,6 +135,8 @@ void loop(void) {
   tft.drawRect(tft.TFTWIDTH, 3*tft.TFTHEIGHT/4, tft.TFTWIDTH, tft.TFTHEIGHT/4, YELLOW);
   tft.drawString(0, 3*tft.TFTHEIGHT/4+2, "Disable watering:", CYAN);
   //tft.drawString(80, 3*tft.TFTHEIGHT/4+2, lightSensorPrintout, WHITE);
+
+  
   
   delay(2000);
 }
