@@ -1,5 +1,5 @@
 #include "st7783/TFTLCD.h"
-#include <SD.h>
+//#include <SD.h>
 #include "st7783/TouchScreen.h"
 //#include "reg51.h"
 
@@ -9,7 +9,6 @@
 #define PWM_FAST 200 
 
 #define SOIL_SENSOR_PIN A5
-#define WATER_SENSOR_PIN A4
 
 //LCD Pins
 #define LCD_CS A3    
@@ -17,12 +16,17 @@
 #define LCD_WR A1   
 #define LCD_RD A0    
 #define LCD_RESET A4
-#define SD_CS 10 
+//#define SD_CS 10 
 
 #define YP A1  // must be an analog pin, use "An" notation!
 #define XM A2  // must be an analog pin, use "An" notation!
 #define YM 7   // can be a digital pin
 #define XP 6   // can be a digital pin
+
+#define TS_MINX 150
+#define TS_MINY 120
+#define TS_MAXX 920
+#define TS_MAXY 940
 
 // Colors
 #define	BLACK           0x0000
@@ -41,8 +45,13 @@ TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 
 int soilValues[VALUE_COUNT];
 int counter = 0;
-
-File root;
+bool watering_disabled = false;
+int watering_level = 5; // 1-5
+int text_left_padding = tft.TFTWIDTH/4;
+int button_padding = 10;
+//File root;
+char soilSensorPrintout[4];
+int update_counter = 0;
 
 void setup(void) { 
   Serial.begin(9600);
@@ -65,79 +74,141 @@ void setup(void) {
   {
     soilValues[i] = 0;
   }
-
-  //pinMode(PUMP_DIRECTION_PIN, OUTPUT);
+  pinMode(13, OUTPUT);
   pinMode(PUMP_PWM_PIN, OUTPUT);
-  //digitalWrite(PUMP_DIRECTION_PIN, LOW);
   digitalWrite(PUMP_PWM_PIN, LOW);
 }
 
 void loop(void) { 
-  //Check for press
-  //TSPoint p = ts.getPoint();
+  //drawScreen();
+  //delay(2000);
   
-  // we have some minimum pressure we consider 'valid'
-  // pressure of 0 means no pressing!
+  //Check for press
+  //Point p;
+  digitalWrite(13, HIGH);
+  Point p = ts.getPoint();
+  digitalWrite(13, LOW);
+
+
+  pinMode(XM, OUTPUT);
+  pinMode(YP, OUTPUT);
+  
   //if (p.z > ts.pressureThreshhold) {
   //   Serial.print("X = "); Serial.print(p.x);
   //   Serial.print("\tY = "); Serial.print(p.y);
   //   Serial.print("\tPressure = "); Serial.println(p.z);
   //}
+  //if (1 == 2) {
+  if (p.z > ts.pressureThreshhold) {
+    p.y = map(p.y, TS_MINY, TS_MAXY, 0, tft.height());
+    
+    if (p.y < tft.TFTHEIGHT/4) {
+      watering_disabled = !watering_disabled;
+      Serial.println("Disable watering pressed");
+      drawScreen();
+      //delay(2000);
+    } else if (p.y < 2*tft.TFTHEIGHT/4) {
+      increaseWateringLevel();
+      Serial.println("Watering level pressed");
+      drawScreen();
+      //delay(2000);
+    } else if (p.y < 3*tft.TFTHEIGHT/4) {
+      Serial.println("Manual watering pressed");
+      water();
+      drawScreen();
+      //delay(2000);
+    } 
+  } else {
+    //Serial.println("No pushing");
+    if (update_counter == 0)
+    {
+      Serial.println("Updating data and drawing screen.");
+      //Read sensor data
+      float soil_sensor = analogRead(SOIL_SENSOR_PIN);
+      soilValues[counter] = int(soil_sensor);
+      String soil_sensor_value = String(soil_sensor);  
+    
+      soil_sensor_value.toCharArray(soilSensorPrintout, 4);
 
-  //Read sensor data
-  float soil_sensor = analogRead(SOIL_SENSOR_PIN);
-  soilValues[counter] = int(soil_sensor);
-  String soil_sensor_value = String(soil_sensor);  
-  char soilSensorPrintout[4];
-  soil_sensor_value.toCharArray(soilSensorPrintout, 4);
-
-  if (soil_sensor > 100.0)
-  {
-    //digitalWrite(PUMP_DIRECTION_PIN, LOW);
-    digitalWrite(PUMP_PWM_PIN, LOW);
-    delay(1000);
-    //digitalWrite(PUMP_DIRECTION_PIN, HIGH); // direction = forward
-    analogWrite(PUMP_PWM_PIN, 255-PWM_FAST); // PWM speed = fast
-  } else
-  {
-    //digitalWrite(PUMP_DIRECTION_PIN, LOW);
-    digitalWrite(PUMP_PWM_PIN, LOW);
+      //Water
+      if (soil_sensor < 500)
+      {
+        water();
+      }
+      
+      drawScreen();
+      //delay(2000);
+      update_counter++;
+    } else {
+      Serial.print("Update ");
+      Serial.print(update_counter);
+      Serial.println(".");
+      update_counter++;
+      if (update_counter > 100) {
+        update_counter = 0;
+      }
+      //delay(20);
+    }
   }
-  
-  float water_sensor = analogRead(WATER_SENSOR_PIN);
-  String water_sensor_value = String(water_sensor);  
-  char waterSensorPrintout[4];
-  water_sensor_value.toCharArray(waterSensorPrintout, 4);
-  
+}
+
+void increaseWateringLevel()
+{
+  watering_level++;
+  if (watering_level > 5)
+  {
+    watering_level = 1;
+  }
+}
+
+void water()
+{
+  println("Watering...");
+  digitalWrite(PUMP_PWM_PIN, LOW);
+  delay(1000);
+  analogWrite(PUMP_PWM_PIN, 255-PWM_FAST); // PWM speed = fast
+  delay(watering_level*1000);
+  digitalWrite(PUMP_PWM_PIN, LOW);
+}
+
+void drawScreen()
+{
   //Draw to screen
   tft.fillScreen(BLACK);
   
-  tft.drawRect(tft.TFTWIDTH, 0, tft.TFTWIDTH, tft.TFTHEIGHT/4, YELLOW);
-  tft.drawString(0, 0+2, "Soil:", CYAN);
-  tft.drawString(80, 0+2, soilSensorPrintout, WHITE);
-  tft.drawString(120, 0+2, "Water:", CYAN);
-  tft.drawString(200, 0+2, waterSensorPrintout, WHITE);
+  tft.drawRect(1, 1, tft.TFTWIDTH-2, tft.TFTHEIGHT/4, YELLOW);
+  tft.drawString(6, 3, "Soil moisture level:", CYAN);
+  tft.drawString(130, 3, soilSensorPrintout, WHITE);
+
   
-  //float previous = soilValues[0];
+  float previous = soilValues[0];
   for (int i = 1; i < VALUE_COUNT; i++)
   {
     //tft.drawLine((i-1)*(tft.TFTWIDTH/VALUE_COUNT), tft.TFTHEIGHT/4-(previous/700)*(tft.TFTHEIGHT/4),i*(tft.TFTWIDTH/VALUE_COUNT), tft.TFTHEIGHT/4-(soilValues[i]/700)*(tft.TFTHEIGHT/4));
     //previous = soilValues[i];
   }
+  tft.drawRect(1, tft.TFTHEIGHT/4, tft.TFTWIDTH-2, tft.TFTHEIGHT/4, YELLOW);
+  tft.fillRect(0.5*button_padding, tft.TFTHEIGHT/4+0.5*button_padding, tft.TFTWIDTH-button_padding-3, tft.TFTHEIGHT/4-button_padding, GREEN);
+  tft.drawString(text_left_padding, tft.TFTHEIGHT/4+35, "Water now", BLACK);
   
-  tft.drawRect(tft.TFTWIDTH, tft.TFTHEIGHT/4, tft.TFTWIDTH, tft.TFTHEIGHT/4, YELLOW);
-  tft.drawString(0, tft.TFTHEIGHT/4+2, "Manual water:", CYAN);
+  tft.drawRect(1, 2*tft.TFTHEIGHT/4, tft.TFTWIDTH-2, tft.TFTHEIGHT/4, YELLOW);
+  tft.drawString(6, tft.TFTHEIGHT/2+3, "Watering level:", CYAN);
+  int block_size = (tft.TFTWIDTH-button_padding) / 5;
+  for (int i = 0; i < watering_level; i++)
+  {
+    tft.fillRect(0.5*button_padding+i*block_size, 2*tft.TFTHEIGHT/4+0.5*button_padding+10, block_size-5, tft.TFTHEIGHT/4-button_padding-10, BLUE);
+  }
   
-  tft.drawRect(tft.TFTWIDTH, tft.TFTHEIGHT/2, tft.TFTWIDTH, tft.TFTHEIGHT/4, YELLOW);
-  tft.drawString(0, tft.TFTHEIGHT/2+2, "Watering level:", CYAN);
-  //tft.drawString(80, tft.TFTHEIGHT/2+2, temperatureSensorPrintout, WHITE);
+  tft.drawRect(1, 3*tft.TFTHEIGHT/4, tft.TFTWIDTH-2, tft.TFTHEIGHT/4, YELLOW);
   
-  tft.drawRect(tft.TFTWIDTH, 3*tft.TFTHEIGHT/4, tft.TFTWIDTH, tft.TFTHEIGHT/4, YELLOW);
-  tft.drawString(0, 3*tft.TFTHEIGHT/4+2, "Disable watering:", CYAN);
-  //tft.drawString(80, 3*tft.TFTHEIGHT/4+2, lightSensorPrintout, WHITE);
-
+  if (watering_disabled)
+  {
+    tft.fillRect(0.5*button_padding, 3*tft.TFTHEIGHT/4+0.5*button_padding, tft.TFTWIDTH-button_padding-3, tft.TFTHEIGHT/4-button_padding, GREEN);
+    tft.drawString(text_left_padding, 3*tft.TFTHEIGHT/4+35, "Enable watering", WHITE);
+  } else {
+    tft.fillRect(0.5*button_padding, 3*tft.TFTHEIGHT/4+0.5*button_padding, tft.TFTWIDTH-button_padding-3, tft.TFTHEIGHT/4-button_padding, RED);
+    tft.drawString(text_left_padding, 3*tft.TFTHEIGHT/4+35, "Disable watering", WHITE);
+  }
   
-  
-  delay(2000);
 }
 
