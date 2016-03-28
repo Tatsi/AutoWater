@@ -40,7 +40,7 @@
 #define WHITE           0xFFFF
 
 #define VALUE_COUNT 24
-#define WATERING_TRESHHOLD 300
+#define WATERING_TRESHHOLD 200
 
 TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET); //TFT chip 7783
 TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
