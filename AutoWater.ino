@@ -40,7 +40,7 @@
 #define WHITE           0xFFFF
 
 #define VALUE_COUNT 24
-#define WATERING_TRESHHOLD 200
+#define WATERING_TRESHHOLD 190
 
 TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET); //TFT chip 7783
 TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
@@ -127,7 +127,7 @@ void loop(void) {
       if (update_counter > 100000) {
         update_counter = 0;
       }
-      delay(10);
+      delay(20);
     }
   }
 }
@@ -161,7 +161,7 @@ void water()
   digitalWrite(PUMP_B_PIN, HIGH);
   digitalWrite(PUMP_A_PIN, LOW);
   //analogWrite(PUMP_PWM_PIN, 255-PWM_FAST); // PWM speed = fast
-  delay(watering_level*2000);
+  delay(pow(1.8, watering_level)*1000);
   digitalWrite(PUMP_A_PIN, HIGH);
   digitalWrite(PUMP_B_PIN, HIGH);
 }
